@@ -20,8 +20,8 @@ class StorageService {
     await Hive.initFlutter();
 
     // Enregistrer les adaptateurs
-    Hive.registerAdapter(ServerModelAdapter());
-    Hive.registerAdapter(ConfigModelAdapter());
+    //Hive.registerAdapter(ServerModelAdapter());
+    //Hive.registerAdapter(ConfigModelAdapter());
 
     // Ouvrir les boxes
     _serversBox = await Hive.openBox<ServerModel>(_serversBoxName);

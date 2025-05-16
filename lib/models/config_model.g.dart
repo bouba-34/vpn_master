@@ -19,7 +19,7 @@ class ConfigModelAdapter extends TypeAdapter<ConfigModel> {
     return ConfigModel(
       id: fields[0] as String,
       remarks: fields[1] as String,
-      configJson: fields[2] as String,
+      configJson: (fields[2] as Map).cast<String, dynamic>(),
       lastUpdated: fields[3] as DateTime,
     );
   }

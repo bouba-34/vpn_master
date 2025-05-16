@@ -24,8 +24,13 @@ void main() async {
 
   // Initialiser Hive et les adaptateurs
   await Hive.initFlutter();
-  Hive.registerAdapter(ServerModelAdapter());
-  Hive.registerAdapter(ConfigModelAdapter());
+  // Vérification si les adaptateurs sont déjà enregistrés
+  if (!Hive.isAdapterRegistered(0)) {
+    Hive.registerAdapter(ConfigModelAdapter());
+  }
+  if (!Hive.isAdapterRegistered(1)) {
+    Hive.registerAdapter(ServerModelAdapter());
+  }
 
   // Initialiser le service de stockage
   final storageService = StorageService();

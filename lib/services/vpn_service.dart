@@ -41,27 +41,31 @@ class VpnService extends ChangeNotifier {
   }
 
   void _handleStatusChange(V2RayStatus status) {
-    /*switch (status) {
-      case V2RayStatus.stopped:
+    switch (status.state.toUpperCase()) {
+      case 'DISCONNECTED':
+      case 'STOPPED':
+      case 'STOPPING':
         _status = VpnStatus.disconnected;
         break;
-      case V2RayStatus.starting:
+      case 'CONNECTING':
+      case 'STARTING':
         _status = VpnStatus.connecting;
         break;
-      case V2RayStatus.started:
+      case 'CONNECTED':
+      case 'STARTED':
         _status = VpnStatus.connected;
         break;
-      case V2RayStatus.stopping:
-        _status = VpnStatus.disconnected;
-        break;
-      case V2RayStatus.error:
+      case 'ERROR':
         _status = VpnStatus.error;
         break;
       default:
         _status = VpnStatus.disconnected;
-    }*/
+        break;
+    }
+
     notifyListeners();
   }
+
 
   Future<bool> connect(ConfigModel config) async {
     if (_status == VpnStatus.connected || _status == VpnStatus.connecting) {
@@ -76,6 +80,9 @@ class VpnService extends ChangeNotifier {
       _configPath = configFile.path;
 
       final configContent = await configFile.readAsString();
+
+      //print("connecting using config content");
+
 
       await _v2ray.startV2Ray(
         remark: "VPN Connection",
@@ -104,12 +111,24 @@ class VpnService extends ChangeNotifier {
     }
   }
 
-  Future<File> _saveConfigToFile(ConfigModel config) async {
+  /*Future<File> _saveConfigToFile(ConfigModel config) async {
     final directory = await getApplicationDocumentsDirectory();
     final file = File('${directory.path}/v2ray_config.json');
     await file.writeAsString(config.configJson);
     return file;
+  }*/
+
+  Future<File> _saveConfigToFile(ConfigModel config) async {
+    final directory = await getApplicationDocumentsDirectory();
+    final file = File('${directory.path}/v2ray_config.json');
+
+    // Convertir le JSON en chaîne avant d'écrire dans le fichier
+    final jsonString = jsonEncode(config.configJson);
+
+    await file.writeAsString(jsonString);
+    return file;
   }
+
 
   Future<bool> isV2RayRunning() async {
     try {

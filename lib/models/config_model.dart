@@ -12,7 +12,7 @@ class ConfigModel {
   final String remarks;
 
   @HiveField(2)
-  final String configJson;
+  final Map<String, dynamic> configJson;
 
   @HiveField(3)
   final DateTime lastUpdated;
@@ -24,16 +24,40 @@ class ConfigModel {
     required this.lastUpdated,
   });
 
-  factory ConfigModel.fromJson(Map<String, dynamic> json) {
+  /*factory ConfigModel.fromJson(Map<String, dynamic> json) {
     return ConfigModel(
       id: json['_id'] ?? '',
       remarks: json['remarks'] ?? '',
-      configJson: json['configJson'] ?? '',
+      configJson: json['configJson'] ?? {},
       lastUpdated: json['lastUpdated'] != null
           ? DateTime.parse(json['lastUpdated'])
           : DateTime.now(),
     );
+  }*/
+
+  factory ConfigModel.fromJson(Map<String, dynamic> json) {
+    final lastUpdatedValue = json['lastUpdated'];
+    DateTime lastUpdated;
+
+    if (lastUpdatedValue == null) {
+      lastUpdated = DateTime.now();
+    } else if (lastUpdatedValue is String) {
+      lastUpdated = DateTime.parse(lastUpdatedValue);
+    } else if (lastUpdatedValue is DateTime) {
+      lastUpdated = lastUpdatedValue;
+    } else {
+      // Cas inattendu, par précaution on met DateTime.now()
+      lastUpdated = DateTime.now();
+    }
+
+    return ConfigModel(
+      id: json['_id'] ?? '',
+      remarks: json['remarks'] ?? '',
+      configJson: json['configJson'] ?? {},
+      lastUpdated: lastUpdated,
+    );
   }
+
 
   Map<String, dynamic> toJson() {
     return {
@@ -47,19 +71,23 @@ class ConfigModel {
   // Méthode pour mettre à jour l'UUID dans la configuration
   ConfigModel updateUuid(String newUuid) {
     try {
-      Map<String, dynamic> config = jsonDecode(configJson);
+      // Vérifie que configJson est bien un Map (pas une String)
+      final updatedConfig = Map<String, dynamic>.from(configJson);
 
       // Mise à jour de l'UUID dans la configuration V2Ray
-      if (config.containsKey('outbounds') && config['outbounds'] is List) {
-        for (var outbound in config['outbounds']) {
-          if (outbound['tag'] == 'proxy' &&
+      if (updatedConfig.containsKey('outbounds') && updatedConfig['outbounds'] is List) {
+        for (var outbound in updatedConfig['outbounds']) {
+          if (outbound is Map &&
+              outbound['tag'] == 'proxy' &&
               outbound['protocol'] == 'vless' &&
               outbound['settings'] != null &&
               outbound['settings']['vnext'] is List) {
             for (var vnext in outbound['settings']['vnext']) {
               if (vnext['users'] is List) {
                 for (var user in vnext['users']) {
-                  user['id'] = newUuid;
+                  if (user is Map) {
+                    user['id'] = newUuid;
+                  }
                 }
               }
             }
@@ -70,11 +98,11 @@ class ConfigModel {
       return ConfigModel(
         id: id,
         remarks: remarks,
-        configJson: jsonEncode(config),
+        configJson: updatedConfig,
         lastUpdated: DateTime.now(),
       );
     } catch (e) {
-      print('Error updating UUID: $e');
+      print('Erreur lors de la mise à jour de l\'UUID: $e');
       return this;
     }
   }

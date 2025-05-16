@@ -29,7 +29,7 @@ class DatabaseService {
       _db = await Db.create(mongoUrl);
       await _db!.open();
       _isConnected = true;
-      print('Connected to MongoDB');
+      print('Connected to MongoDB with uri $mongoUrl');
     } catch (e) {
       print('Failed to connect to MongoDB: $e');
       _isConnected = false;

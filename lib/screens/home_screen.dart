@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
@@ -195,6 +197,8 @@ class _HomeScreenState extends State<HomeScreen> {
         try {
           await _databaseService.connect();
           config = await _databaseService.getConfigForServer(_selectedServer!.id);
+
+          //print("config from db ${jsonEncode(config!.configJson)}");
         } catch (e) {
           print('Erreur de récupération depuis la BDD: $e');
         }
@@ -206,7 +210,6 @@ class _HomeScreenState extends State<HomeScreen> {
       if (config != null) {
         // Mettre à jour l'UUID dans la configuration
         final updatedConfig = config.updateUuid(_uuid);
-
         // Sauvegarder la configuration mise à jour localement
         await _storageService.saveConfig(updatedConfig);
 
