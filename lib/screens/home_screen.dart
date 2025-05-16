@@ -347,7 +347,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
               // Sélection du serveur
               const Text(
-                'Serveur',
+                'Serveurs',
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
@@ -374,11 +374,6 @@ class _HomeScreenState extends State<HomeScreen> {
               UuidInput(
                 initialValue: _uuid,
                 onChanged: _onUuidChanged,
-                onRandomGenerate: () {
-                  setState(() {
-                    _isConfigUpdated = false;
-                  });
-                },
               ),
               const SizedBox(height: 32),
 

@@ -73,21 +73,20 @@ class VpnService extends ChangeNotifier {
     }
 
     try {
-      _status = VpnStatus.connecting;
-      notifyListeners();
+      if(await _v2ray.requestPermission()){
+        _status = VpnStatus.connecting;
+        notifyListeners();
 
-      final configFile = await _saveConfigToFile(config);
-      _configPath = configFile.path;
+        final configFile = await _saveConfigToFile(config);
+        _configPath = configFile.path;
 
-      final configContent = await configFile.readAsString();
+        final configContent = await configFile.readAsString();
 
-      //print("connecting using config content");
-
-
-      await _v2ray.startV2Ray(
-        remark: "VPN Connection",
-        config: configContent,
-      );
+        await _v2ray.startV2Ray(
+          remark: "VPN MASTER",
+          config: configContent
+        );
+      }
 
       return true;
     } catch (e) {
@@ -110,13 +109,6 @@ class VpnService extends ChangeNotifier {
       }
     }
   }
-
-  /*Future<File> _saveConfigToFile(ConfigModel config) async {
-    final directory = await getApplicationDocumentsDirectory();
-    final file = File('${directory.path}/v2ray_config.json');
-    await file.writeAsString(config.configJson);
-    return file;
-  }*/
 
   Future<File> _saveConfigToFile(ConfigModel config) async {
     final directory = await getApplicationDocumentsDirectory();

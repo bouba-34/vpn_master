@@ -24,17 +24,6 @@ class ConfigModel {
     required this.lastUpdated,
   });
 
-  /*factory ConfigModel.fromJson(Map<String, dynamic> json) {
-    return ConfigModel(
-      id: json['_id'] ?? '',
-      remarks: json['remarks'] ?? '',
-      configJson: json['configJson'] ?? {},
-      lastUpdated: json['lastUpdated'] != null
-          ? DateTime.parse(json['lastUpdated'])
-          : DateTime.now(),
-    );
-  }*/
-
   factory ConfigModel.fromJson(Map<String, dynamic> json) {
     final lastUpdatedValue = json['lastUpdated'];
     DateTime lastUpdated;
