@@ -19,10 +19,6 @@ class StorageService {
   Future<void> init() async {
     await Hive.initFlutter();
 
-    // Enregistrer les adaptateurs
-    //Hive.registerAdapter(ServerModelAdapter());
-    //Hive.registerAdapter(ConfigModelAdapter());
-
     // Ouvrir les boxes
     _serversBox = await Hive.openBox<ServerModel>(_serversBoxName);
     _configsBox = await Hive.openBox<ConfigModel>(_configsBoxName);

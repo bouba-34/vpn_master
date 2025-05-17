@@ -34,8 +34,6 @@ class _HomeScreenState extends State<HomeScreen> {
   bool _isRefreshing = false;
   bool _isConfigUpdated = false;
   ConfigModel? _currentConfig;
-  String _bytesIn = '0 KB';
-  String _bytesOut = '0 KB';
 
   @override
   void initState() {
@@ -66,8 +64,6 @@ class _HomeScreenState extends State<HomeScreen> {
     // Charger les serveurs depuis le stockage local
     _loadLocalServers();
 
-    // Essayer de se connecter à la base de données et synchroniser
-    _syncWithDatabase();
 
     setState(() {
       _isLoading = false;
@@ -121,10 +117,12 @@ class _HomeScreenState extends State<HomeScreen> {
 
       // Récupérer les serveurs
       final remoteServers = await _databaseService.getServers();
+      final remoteConfigs = await _databaseService.getConfigs();
 
-      if (remoteServers.isNotEmpty) {
+      if (remoteServers.isNotEmpty && remoteConfigs.isNotEmpty) {
         // Sauvegarder les serveurs localement
         await _storageService.saveServers(remoteServers);
+        await _storageService.saveConfigs(remoteConfigs);
 
         setState(() {
           _servers = remoteServers;
@@ -163,7 +161,7 @@ class _HomeScreenState extends State<HomeScreen> {
     _storageService.saveLastSelectedServerId(server.id);
   }
 
-  Future<void> _updateConfig() async {
+  Future<void> _connectVpn() async {
     if (_selectedServer == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -189,20 +187,8 @@ class _HomeScreenState extends State<HomeScreen> {
     });
 
     try {
-      // Essayer d'abord de récupérer la configuration depuis la base de données
+      // Mise à jour de la configuration d'abord
       ConfigModel? config;
-
-      final connectivityResult = await Connectivity().checkConnectivity();
-      if (connectivityResult != ConnectivityResult.none) {
-        try {
-          await _databaseService.connect();
-          config = await _databaseService.getConfigForServer(_selectedServer!.id);
-
-          //print("config from db ${jsonEncode(config!.configJson)}");
-        } catch (e) {
-          print('Erreur de récupération depuis la BDD: $e');
-        }
-      }
 
       // Si la configuration n'est pas disponible en ligne, essayer de la récupérer localement
       config ??= _storageService.getConfig(_selectedServer!.configId);
@@ -218,53 +204,21 @@ class _HomeScreenState extends State<HomeScreen> {
           _isConfigUpdated = true;
         });
 
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(Constants.serverConfigUpdated),
-            duration: Constants.snackBarDuration,
-          ),
-        );
+        // Maintenant connecter avec la config mise à jour
+        final success = await _vpnService.connect(_currentConfig!);
+
+        if (success) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(Constants.connectionSuccessful),
+              duration: Constants.snackBarDuration,
+            ),
+          );
+        } else {
+          throw Exception(_vpnService.errorMessage);
+        }
       } else {
         throw Exception('Configuration non trouvée');
-      }
-    } catch (e) {
-      print('Erreur de mise à jour de la configuration: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('${Constants.errorUpdatingConfig}: $e'),
-          duration: Constants.snackBarDuration,
-        ),
-      );
-    } finally {
-      setState(() {
-        _isLoading = false;
-      });
-    }
-  }
-
-  Future<void> _connectVpn() async {
-    if (_currentConfig == null || !_isConfigUpdated) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Veuillez d\'abord mettre à jour la configuration'),
-          duration: Constants.snackBarDuration,
-        ),
-      );
-      return;
-    }
-
-    try {
-      final success = await _vpnService.connect(_currentConfig!);
-
-      if (success) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(Constants.connectionSuccessful),
-            duration: Constants.snackBarDuration,
-          ),
-        );
-      } else {
-        throw Exception(_vpnService.errorMessage);
       }
     } catch (e) {
       print('Erreur de connexion VPN: $e');
@@ -274,6 +228,10 @@ class _HomeScreenState extends State<HomeScreen> {
           duration: Constants.snackBarDuration,
         ),
       );
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
     }
   }
 
@@ -311,10 +269,10 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('V2Ray VPN Client'),
+        title: const Text('Vpn Master'),
         actions: [
           IconButton(
-            icon: Icon(_isRefreshing ? Icons.sync : Icons.refresh),
+            icon: Icon(_isRefreshing ? Icons.sync : Icons.cloud),
             onPressed: _isRefreshing ? null : _syncWithDatabase,
             tooltip: 'Synchroniser',
           ),
@@ -326,10 +284,18 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+
   Widget _buildBody() {
     return Consumer<VpnService>(
       builder: (context, vpnService, _) {
         final vpnStatus = vpnService.status;
+        // Récupérer les statistiques de trafic directement du service VPN
+        final bytesIn = vpnService.bytesIn;
+        final bytesOut = vpnService.bytesOut;
+        final duration = vpnService.duration;
+        // Le champ UUID est désactivé quand le VPN est connecté ou en cours de connexion
+        final uuidEnabled = vpnStatus != VpnStatus.connected &&
+            vpnStatus != VpnStatus.connecting;
 
         return Padding(
           padding: const EdgeInsets.all(16.0),
@@ -340,8 +306,9 @@ class _HomeScreenState extends State<HomeScreen> {
               StatusIndicator(
                 status: vpnStatus,
                 serverName: _selectedServer?.name,
-                bytesIn: _bytesIn,
-                bytesOut: _bytesOut,
+                bytesIn: bytesIn,
+                bytesOut: bytesOut,
+                duration: duration,
               ),
               const SizedBox(height: 24),
 
@@ -357,7 +324,7 @@ class _HomeScreenState extends State<HomeScreen> {
               ServerDropdown(
                 servers: _servers,
                 selectedServer: _selectedServer,
-                onChanged: (server) => _selectServer(server!),
+                onChanged: uuidEnabled ? (server) => _selectServer(server!) : null,
                 isLoading: _isRefreshing,
               ),
               const SizedBox(height: 24),
@@ -374,15 +341,15 @@ class _HomeScreenState extends State<HomeScreen> {
               UuidInput(
                 initialValue: _uuid,
                 onChanged: _onUuidChanged,
+                enabled: uuidEnabled,
               ),
-              const SizedBox(height: 32),
+              const SizedBox(height: 25),
 
               // Boutons de connexion/déconnexion
               ConnectionButton(
                 status: vpnStatus,
                 onConnect: _connectVpn,
                 onDisconnect: _disconnectVpn,
-                onUpdateConfig: _updateConfig,
                 isConfigUpdated: _isConfigUpdated,
               ),
             ],

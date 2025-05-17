@@ -4,11 +4,13 @@ import 'package:uuid/uuid.dart';
 class UuidInput extends StatefulWidget {
   final String? initialValue;
   final Function(String) onChanged;
+  final bool enabled;
 
   const UuidInput({
     super.key,
     this.initialValue,
     required this.onChanged,
+    this.enabled = true
   });
 
   @override
@@ -33,6 +35,15 @@ class _UuidInputState extends State<UuidInput> {
   }
 
   @override
+  void didUpdateWidget(UuidInput oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Si l'état d'activation change et que le champ est désactivé, libérer le focus
+    if (oldWidget.enabled != widget.enabled && !widget.enabled) {
+      _focusNode.unfocus();
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
@@ -53,12 +64,20 @@ class _UuidInputState extends State<UuidInput> {
             child: TextField(
               controller: _controller,
               focusNode: _focusNode,
-              decoration: const InputDecoration(
+              enabled: widget.enabled,
+              decoration: InputDecoration(
                 border: InputBorder.none,
                 hintText: 'Entrez votre UUID',
+                suffixIcon: !widget.enabled
+                    ? const Icon(Icons.lock, size: 16, color: Colors.grey)
+                    : null,
               ),
               onChanged: widget.onChanged,
-              style: Theme.of(context).textTheme.bodyLarge,
+        style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+          // Grisé quand désactivé
+          color: widget.enabled
+              ? Theme.of(context).textTheme.bodyLarge?.color
+              : Theme.of(context).disabledColor,),
             ),
           ),
         ],

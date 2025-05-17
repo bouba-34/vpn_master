@@ -6,7 +6,7 @@
     <!-- Très important pour un service VPN -->
     <uses-permission android:name="android.permission.BIND_VPN_SERVICE" />
     <application
-        android:label="vpn_master"
+        android:label="Vpn Master"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity

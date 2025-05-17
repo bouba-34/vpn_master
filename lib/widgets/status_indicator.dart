@@ -6,14 +6,16 @@ class StatusIndicator extends StatelessWidget {
   final String? serverName;
   final String bytesIn;
   final String bytesOut;
+  final String duration;
 
   const StatusIndicator({
-    Key? key,
+    super.key,
     required this.status,
     this.serverName,
     this.bytesIn = '0 KB',
     this.bytesOut = '0 KB',
-  }) : super(key: key);
+    this.duration = '00:00:00',
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -63,6 +65,24 @@ class StatusIndicator extends StatelessWidget {
           ),
           if (status == VpnStatus.connected) ...[
             const Divider(height: 24),
+            // Ajout de l'affichage de la durée
+            Center(
+              child: Container(
+                padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  'Durée: $duration',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [

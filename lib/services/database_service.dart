@@ -110,4 +110,24 @@ class DatabaseService {
     if (server == null) return null;
     return getConfigById(server.configId);
   }
+
+  Future<List<ConfigModel>> getConfigs() async {
+    if (!await isConnected()) {
+      try {
+        await connect();
+      } catch (e) {
+        return [];
+      }
+    }
+
+    try {
+      final collection = _db!.collection('configs');
+      final configs = await collection.find().toList();
+      return configs.map((config) => ConfigModel.fromJson(config)).toList();
+    } catch (e) {
+      print('Error getting configs: $e');
+      return [];
+    }
+  }
+
 }

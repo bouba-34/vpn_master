@@ -4,19 +4,21 @@ import '../models/server_model.dart';
 class ServerDropdown extends StatelessWidget {
   final List<ServerModel> servers;
   final ServerModel? selectedServer;
-  final Function(ServerModel?) onChanged;
+  final Function(ServerModel?)? onChanged;
   final bool isLoading;
 
   const ServerDropdown({
-    Key? key,
+    super.key,
     required this.servers,
     required this.selectedServer,
     required this.onChanged,
     this.isLoading = false,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
+    final bool isEnabled = onChanged != null; // Le dropdown est activé si onChanged n'est pas null
+
     return Container(
       decoration: BoxDecoration(
         color: Theme.of(context).cardColor,
@@ -56,7 +58,12 @@ class ServerDropdown extends StatelessWidget {
                       children: [
                         Text(
                           server.name,
-                          style: const TextStyle(fontWeight: FontWeight.bold),
+                          style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                            color: isEnabled
+                                ? null
+                                : Theme.of(context).disabledColor,
+                          ),
                         ),
                         if (server.description.isNotEmpty)
                           Text(
@@ -71,12 +78,18 @@ class ServerDropdown extends StatelessWidget {
                       ],
                     ),
                   ),
+                  // Indicateur visuel de verrouillage quand désactivé
+                  if (!isEnabled)
+                    const Icon(Icons.lock, size: 16, color: Colors.grey),
                 ],
               ),
             );
           }).toList(),
-          onChanged: onChanged,
-          icon: const Icon(Icons.arrow_drop_down),
+          onChanged: isEnabled ? onChanged : null, // Désactiver le dropdown si onChanged est null
+          icon: Icon(
+            Icons.arrow_drop_down,
+            color: isEnabled ? null : Theme.of(context).disabledColor,
+          ),
           elevation: 2,
           style: Theme.of(context).textTheme.bodyLarge,
           dropdownColor: Theme.of(context).cardColor,

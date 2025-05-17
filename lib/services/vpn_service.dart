@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_v2ray/flutter_v2ray.dart';
 import 'package:path_provider/path_provider.dart';
 import '../models/config_model.dart';
+import '../utils/config_helper.dart';
 
 enum VpnStatus {
   disconnected,
@@ -24,8 +25,17 @@ class VpnService extends ChangeNotifier {
   String _errorMessage = '';
   String? _configPath;
 
+  String _bytesIn = '0 KB';
+  String _bytesOut = '0 KB';
+  String _duration = '00:00:00';
+  int _downloadSpeed = 0;
+  int _uploadSpeed = 0;
+
   VpnStatus get status => _status;
   String get errorMessage => _errorMessage;
+  String get bytesIn => _bytesIn;
+  String get bytesOut => _bytesOut;
+  String get duration => _duration;
 
   Future<void> _initV2Ray() async {
     _v2ray = FlutterV2ray(
@@ -46,6 +56,8 @@ class VpnService extends ChangeNotifier {
       case 'STOPPED':
       case 'STOPPING':
         _status = VpnStatus.disconnected;
+        // Réinitialiser les statistiques lors de la déconnexion
+        _resetTrafficStats();
         break;
       case 'CONNECTING':
       case 'STARTING':
@@ -63,7 +75,32 @@ class VpnService extends ChangeNotifier {
         break;
     }
 
+    // Mettre à jour les statistiques de trafic si connecté
+    if (_status == VpnStatus.connected) {
+      _updateTrafficStats(status);
+    }
+
     notifyListeners();
+  }
+
+  void _resetTrafficStats() {
+    _bytesIn = '0 KB';
+    _bytesOut = '0 KB';
+    _duration = '00:00:00';
+    _downloadSpeed = 0;
+    _uploadSpeed = 0;
+    notifyListeners();
+  }
+
+  // Méthode pour mettre à jour les statistiques de trafic à partir de V2RayStatus
+  void _updateTrafficStats(V2RayStatus status) {
+    _duration = status.duration;
+    _downloadSpeed = status.downloadSpeed;
+    _uploadSpeed = status.uploadSpeed;
+
+    // Formater les totaux de download/upload pour affichage
+    _bytesIn = ConfigHelper.formatBytes(status.download);
+    _bytesOut = ConfigHelper.formatBytes(status.upload);
   }
 
 
