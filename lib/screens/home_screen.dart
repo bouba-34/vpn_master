@@ -9,6 +9,7 @@ import '../models/config_model.dart';
 import '../services/database_service.dart';
 import '../services/storage_service.dart';
 import '../services/vpn_service.dart';
+import '../widgets/proxy_button.dart';
 import '../widgets/server_dropdown.dart';
 import '../widgets/uuid_input.dart';
 import '../widgets/connection_button.dart';
@@ -352,6 +353,9 @@ class _HomeScreenState extends State<HomeScreen> {
                 onDisconnect: _disconnectVpn,
                 isConfigUpdated: _isConfigUpdated,
               ),
+
+              // Bouton pour le partage de connexion via proxy
+              const ProxyButton(),
             ],
           ),
         );

@@ -37,6 +37,9 @@ dependencies:
   device_info_plus: ^11.4.0
   flutter_dotenv: ^5.2.1
   mongo_dart: ^0.10.5
+  network_info_plus: ^6.1.4
+  qr_flutter: ^4.1.0
+  share_plus: ^11.0.0
 
 dev_dependencies:
   flutter_test:

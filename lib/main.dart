@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import 'models/config_model.dart';
 import 'models/server_model.dart';
 import 'screens/home_screen.dart';
+import 'services/proxy_service.dart';
 import 'services/storage_service.dart';
 import 'services/vpn_service.dart';
 import 'themes/app_theme.dart';
@@ -47,6 +48,7 @@ class MyApp extends StatelessWidget {
     return MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => VpnService()),
+        ChangeNotifierProvider(create: (_) => ProxyService()), // Ajout du provider pour le service proxy
       ],
       child: MaterialApp(
         title: 'VPN MASTER BY BEDEZO',
