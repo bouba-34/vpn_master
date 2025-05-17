@@ -105,10 +105,14 @@ class _ProxyScreenState extends State<ProxyScreen> with SingleTickerProviderStat
             ],
             bottom: TabBar(
               controller: _tabController,
+              labelColor: Colors.white,
               tabs: const [
-                Tab(icon: Icon(Icons.settings), text: 'Configuration'),
-                Tab(icon: Icon(Icons.qr_code), text: 'QR Code'),
-                Tab(icon: Icon(Icons.history), text: 'Historique'),
+                Tab(icon: Icon(Icons.settings,
+                color: Colors.white,), text: 'Configuration'),
+                Tab(icon: Icon(Icons.qr_code,
+                color: Colors.white,), text: 'QR Code'),
+                Tab(icon: Icon(Icons.history,
+                color: Colors.white,), text: 'Historique'),
               ],
             ),
           ),
@@ -129,14 +133,8 @@ class _ProxyScreenState extends State<ProxyScreen> with SingleTickerProviderStat
                     ? () => proxyService.stopProxy()
                     : () async {
                   _saveSettings(proxyService);
-                  final success = await proxyService.startProxy();
-                  if (!success && mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Impossible de démarrer le serveur proxy. Vérifiez votre connexion Wi-Fi.')),
-                    );
-                  } else if (success && mounted) {
-                    _tabController.animateTo(1); // Afficher l'onglet QR Code
-                  }
+                  await proxyService.startProxy();
+                  _tabController.animateTo(1);
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: proxyService.isRunning ? Colors.red : Theme.of(context).colorScheme.primary,
@@ -147,7 +145,10 @@ class _ProxyScreenState extends State<ProxyScreen> with SingleTickerProviderStat
                   children: [
                     Icon(proxyService.isRunning ? Icons.stop : Icons.play_arrow),
                     const SizedBox(width: 8),
-                    Text(proxyService.isRunning ? 'Arrêter le serveur proxy' : 'Démarrer le serveur proxy'),
+                    Text(proxyService.isRunning ? 'Arrêter le serveur proxy' : 'Démarrer le serveur proxy',
+                    style: TextStyle(
+                      color: Colors.white
+                    ),),
                   ],
                 ),
               ),
@@ -381,15 +382,19 @@ class _ProxyScreenState extends State<ProxyScreen> with SingleTickerProviderStat
           const SizedBox(height: 8),
           const ListTile(
             leading: CircleAvatar(child: Text('1')),
-            title: Text('Connectez-vous au même réseau Wi-Fi'),
+            title: Text("Ouvrez votre point d'accès"),
           ),
           const ListTile(
             leading: CircleAvatar(child: Text('2')),
-            title: Text('Scannez le code QR ou entrez les informations manuellement'),
+            title: Text("Connectez l'autre appareil au réseau Wi-Fi"),
           ),
           const ListTile(
             leading: CircleAvatar(child: Text('3')),
-            title: Text('Configurez les paramètres proxy sur votre appareil'),
+            title: Text('Scannez le code QR ou entrez les informations manuellement'),
+          ),
+          const ListTile(
+            leading: CircleAvatar(child: Text('4')),
+            title: Text("Configurez les paramètres proxy sur l'autre appareil"),
           ),
           const SizedBox(height: 16),
           Row(

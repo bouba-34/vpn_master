@@ -1,9 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
-import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/foundation.dart';
-import 'package:network_info_plus/network_info_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 // Modèles pour les connexions et sessions
@@ -125,38 +123,97 @@ class ProxyService extends ChangeNotifier {
     }
   }
 
-  // Mise à jour de l'adresse IP locale
   Future<void> updateLocalIpAddress() async {
     try {
-      final connectivityResult = await Connectivity().checkConnectivity();
-      if (connectivityResult == ConnectivityResult.wifi) {
-        final networkInfo = NetworkInfo();
-        final ip = await networkInfo.getWifiIP();
-        _localIpAddress = ip ?? '';
-      } else {
-        _localIpAddress = '';
+      // Vérifier si le hotspot est actif en cherchant des interfaces spécifiques
+      final interfaces = await NetworkInterface.list(
+        type: InternetAddressType.IPv4,
+        includeLinkLocal: false,
+      );
+
+      // Rechercher l'interface du hotspot en priorité
+      // Les noms peuvent varier selon les appareils: ap0, wlan0, wlan1, etc.
+      for (var interface in interfaces) {
+        print("Interface trouvée: ${interface.name} (${interface.addresses.map((a) => a.address).join(', ')})");
+
+        if (interface.name.toLowerCase().contains('ap') ||  // ap0 sur certains appareils
+            interface.name.toLowerCase().contains('wlan') || // wlan0 ou wlan1
+            interface.name.toLowerCase() == 'hotspot') {
+
+          for (var addr in interface.addresses) {
+            // Les adresses hotspot commencent généralement par 192.168.
+            if (addr.address.startsWith('192.168.')) {
+              _localIpAddress = addr.address;
+              print("Adresse IP hotspot trouvée: $_localIpAddress");
+              notifyListeners();
+              return;
+            }
+          }
+        }
       }
+
+      // Fallback: chercher n'importe quelle adresse 192.168.x.x si on n'a pas trouvé par nom d'interface
+      for (var interface in interfaces) {
+        for (var addr in interface.addresses) {
+          if (addr.address.startsWith('192.168.')) {
+            _localIpAddress = addr.address;
+            print("Adresse IP locale trouvée: $_localIpAddress");
+            notifyListeners();
+            return;
+          }
+        }
+      }
+
+      // Dernier recours: utiliser n'importe quelle adresse non-loopback
+      for (var interface in interfaces) {
+        for (var addr in interface.addresses) {
+          if (!addr.address.startsWith('127.')) {
+            _localIpAddress = addr.address;
+            print("Adresse IP alternative trouvée: $_localIpAddress");
+            notifyListeners();
+            return;
+          }
+        }
+      }
+
+      _localIpAddress = '127.0.0.1'; // localhost comme dernier recours
+      print("Aucune adresse IP externe trouvée, utilisation de localhost");
       notifyListeners();
     } catch (e) {
-      debugPrint('Erreur lors de la récupération de l\'adresse IP locale: $e');
-      _localIpAddress = '';
+      print('Erreur lors de la récupération de l\'adresse IP: $e');
+      _localIpAddress = '127.0.0.1';
+      notifyListeners();
     }
   }
 
-  // Démarrage du serveur proxy
   Future<bool> startProxy() async {
     if (_isRunning) return true;
 
     try {
-      // Vérifier que nous sommes sur un réseau Wifi
+      // Mettre à jour l'adresse IP locale
       await updateLocalIpAddress();
-      if (_localIpAddress.isEmpty) {
-        return false;
+      print("Tentative de démarrage du proxy sur $_localIpAddress:$_port");
+
+      // Essayer différentes approches pour lier le serveur
+      try {
+        // Option 1: Essayer de se lier à l'adresse spécifique du hotspot
+        _server = await ServerSocket.bind(InternetAddress(_localIpAddress), _port);
+      } catch (e) {
+        print("Impossible de se lier à l'adresse spécifique: $e");
+        try {
+          // Option 2: Essayer de se lier à toutes les interfaces
+          _server = await ServerSocket.bind(InternetAddress.anyIPv4, _port);
+        } catch (e2) {
+          print("Impossible de se lier à anyIPv4: $e2");
+          // Option 3: Essayer avec localhost
+          _server = await ServerSocket.bind(InternetAddress.loopbackIPv4, _port);
+          // Si nous sommes ici, au moins localhost fonctionne
+          _localIpAddress = '127.0.0.1';
+        }
       }
 
-      // Démarrer le serveur socket
-      _server = await ServerSocket.bind(InternetAddress.anyIPv4, _port);
       _isRunning = true;
+      print("Serveur proxy démarré avec succès sur $_localIpAddress:$_port");
 
       // Écouter les connexions entrantes
       _server!.listen(_handleConnection);
@@ -164,7 +221,7 @@ class ProxyService extends ChangeNotifier {
       notifyListeners();
       return true;
     } catch (e) {
-      debugPrint('Erreur lors du démarrage du serveur proxy: $e');
+      print('Erreur lors du démarrage du serveur proxy: $e');
       return false;
     }
   }
